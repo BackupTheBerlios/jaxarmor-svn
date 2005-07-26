@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="SharingWizard">
+	</section>
+	<section name="NewLocationWizard">
+		<list key="ConfigurationWizardMainPage.STORE_HOSTNAME_ID">
+			<item value="svn.berlios.de"/>
+		</list>
+		<list key="ConfigurationWizardMainPage.STORE_PATH_ID" value="svn.berlios.de">
+			<item value="/svnroot/repos/jaxarmor/trunk"/>
+			<item value="/svnroot/repos/jaxarmor/trunk/"/>
+			<item value="/jaxarmor"/>
+			<item value="jaxarmor"/>
+		</list>
+		<list key="ConfigurationWizardMainPage.STORE_USERNAME_ID" value="jaxarmor">
+			<item value="pepez"/>
+		</list>
+	</section>
+</section>

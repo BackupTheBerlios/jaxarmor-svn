@@ -1,0 +1,225 @@
+import java.util.Iterator;
+
+import org.odejava.Body;
+import org.odejava.GeomBox;
+import org.odejava.GeomSphere;
+import org.odejava.JointGroup;
+import org.odejava.JointHinge2;
+import org.odejava.World;
+import org.odejava.ode.Ode;
+
+public class APCvehicle {
+	World world = null;
+	
+	JointGroup jointGroup;
+
+    // Store wheel hinges locally as they are accessed frequently
+    JointHinge2 hingeFrontLeft;
+    JointHinge2 hingeFrontRight;
+    JointHinge2 hingeMidLeft;
+    JointHinge2 hingeMidRight;
+    JointHinge2 hingeBackLeft;
+    JointHinge2 hingeBackRight;
+    
+    // Car parameters
+    float carDensity = 1f;
+    float wheelLength = 1f;
+    float wheelRadius = 4f;
+    float chassisSizeX = 15f;
+    float chassisSizeY = 30f;
+//    float chassisSizeZ = 1.5f;
+    float chassisSizeZ = 8f;
+    float wheelChassisDistance = 0.5f;
+    float groundClearance = 3.0f;
+    float bumperChassisDistance = 2.5f;
+    float chassisMass = 8f;
+    float wheelMass = 0.25f;
+    float suspensionErp = 0.8f;
+    float suspensionCfm = 0.4f;
+
+    float gasPedal = 0f;
+    float speed = 0f;
+    float maxSpeed = 25f;
+    float minSpeed = -5f;
+
+    boolean allbrake = false;
+    boolean handbrake = false;
+
+    float steeringWheel = 0f;
+    float steering = 0f;
+    float steeringLimit = (float) Math.PI / 12;
+    float steeringDeadzone = 0.00f;
+
+    int chassisId;
+    int wheelFLId, wheelFRId, wheelMLId, wheelMRId, wheelBLId, wheelBRId;
+	
+    
+    /**
+     * Initialize car with six wheels. Create geoms with bodies, bodies are
+     * dynamic objects that have position and rotation updated after each
+     * World.step() call.
+     *
+     */
+	public APCvehicle(World world) {
+		this.world=world;
+		jointGroup = new JointGroup();
+		initCar();		
+	}
+	
+    private void initCar() {
+        Body b;
+        
+        steering = 0;
+        speed = 0;
+        
+        // Create car wheels
+        b = new Body("wheelFrontLeft", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelFLId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelFrontRight", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelFRId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelMidLeft", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelMLId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelMidRight",world,  new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelMRId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelBackLeft", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelBLId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelBackRight",world,  new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelBRId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        // Create car chassis
+        b =
+            new Body(
+                "chassis",
+                world,
+                new GeomBox(chassisSizeX, chassisSizeY, chassisSizeZ));
+        b.adjustMass(chassisMass);
+        chassisId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+        
+//      Car chassis
+        world.getBody("chassis").setPosition(curX, curY, curZ+groundClearance);
+
+        // Car wheels
+        world.getBody("wheelFrontLeft").setPosition(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY + chassisSizeY / 2 - wheelRadius,
+            curZ);
+        world.getBody("wheelFrontRight").setPosition(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY + chassisSizeY / 2 - wheelRadius,
+            curZ);
+        world.getBody("wheelMidLeft").setPosition(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY,
+            curZ);
+        world.getBody("wheelMidRight").setPosition(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY,
+            curZ);
+        world.getBody("wheelBackLeft").setPosition(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY - chassisSizeY / 2 + wheelRadius,
+            curZ);
+        world.getBody("wheelBackRight").setPosition(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY - chassisSizeY / 2 + wheelRadius,
+            curZ);
+
+        // Empty joint group
+        jointGroup.empty();
+
+        // Set front hinges (this has steering)
+        hingeFrontLeft = new JointHinge2("hingeFrontLeft", world, jointGroup);
+        hingeFrontLeft.attach(
+            world.getBody("chassis"),
+            world.getBody("wheelFrontLeft"));
+        hingeFrontLeft.setAnchor(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY + chassisSizeY / 2 - wheelRadius,
+            curZ);
+
+        hingeFrontRight = new JointHinge2("hingeFrontRight", world, jointGroup);
+        hingeFrontRight.attach(
+            world.getBody("chassis"),
+            world.getBody("wheelFrontRight"));
+        hingeFrontRight.setAnchor(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY + chassisSizeY / 2 - wheelRadius,
+            curZ);
+
+        // Set middle hinges
+        hingeMidLeft = new JointHinge2("hingeMidLeft", world, jointGroup);
+        hingeMidLeft.attach(          
+            world.getBody("chassis"),
+            world.getBody("wheelMidLeft"));
+        hingeMidLeft.setAnchor(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY,
+            curZ);
+
+        hingeMidRight = new JointHinge2("hingeMidRight", world, jointGroup);
+        hingeMidRight.attach(
+            world.getBody("chassis"),
+            world.getBody("wheelMidRight"));
+        hingeMidRight.setAnchor(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY,
+            curZ);
+
+        // Set back hinges
+        hingeBackLeft = new JointHinge2("hingeBackLeft", world, jointGroup);
+        hingeBackLeft.attach(
+            world.getBody("chassis"),
+            world.getBody("wheelBackLeft"));
+        hingeBackLeft.setAnchor(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY - chassisSizeY / 2 + wheelRadius,
+            curZ);
+
+        hingeBackRight = new JointHinge2("hingeBackRight", world, jointGroup);
+        hingeBackRight.attach(
+            world.getBody("chassis"),
+            world.getBody("wheelBackRight"));
+        hingeBackRight.setAnchor(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY - chassisSizeY / 2 + wheelRadius,
+            curZ);
+
+        // Set all hinges axis and parameters
+        JointHinge2 joint;
+        Iterator iter = jointGroup.getJointList().iterator();
+        while (iter.hasNext()) {
+            joint = (JointHinge2) iter.next();
+            // Set axis
+            joint.setAxis1(0, 0, 1);
+            joint.setAxis2(1, 0, 0);
+            // Set suspension
+            joint.setParam(Ode.dParamSuspensionERP, suspensionErp);
+            joint.setParam(Ode.dParamSuspensionCFM, suspensionCfm);
+            // Set stops to make sure wheels always stay in alignment
+            joint.setParam(Ode.dParamLoStop, 0);
+            joint.setParam(Ode.dParamHiStop, 0);
+            // Set acceleration parameters
+            joint.setParam(Ode.dParamFMax, 0);
+            joint.setParam(Ode.dParamVel2, 0);
+            joint.setParam(Ode.dParamFMax2, maxSpeed);
+        }
+    }
+}

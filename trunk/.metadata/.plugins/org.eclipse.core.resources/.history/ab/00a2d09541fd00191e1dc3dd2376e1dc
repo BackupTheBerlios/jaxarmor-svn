@@ -1,0 +1,162 @@
+import java.util.Timer;
+import java.util.TimerTask;
+
+import com.xith3d.scenegraph.*;
+import javax.vecmath.*;
+// use Jogl
+import com.xith3d.render.*;
+import com.xith3d.render.jogl.*;
+// Texture stuff
+import com.xith3d.loaders.texture.*;
+// Model loader
+import com.kinostudios.loader3ds.*;
+
+
+/**
+*    Xith example using the Loader3DS.
+*
+*    @author Greg Slepak
+*/
+public class LoaderExample implements Runnable {
+	private final String MODEL  = "./models/jeep1.3ds";
+	private final String IMAGES = "./models/";
+	private final int	 DIST	= 20;
+	
+	TDSModel             model;
+	View                 view;
+	
+	int					 currentFrame = 0;
+
+	public LoaderExample() {
+		VirtualUniverse vu = new VirtualUniverse();
+		view = new View();
+		Locale locale = new Locale();
+
+		vu.addView(view);
+		vu.addLocale(locale);
+
+		TextureLoader.tf.registerPath(IMAGES);
+
+		BranchGroup scene = createScene();
+
+		locale.addBranchGraph(scene);
+
+		RenderPeer    rp      = new RenderPeerImpl();
+		CanvasPeer    cp      = rp.makeCanvas(null, 800, 600, 32, false);
+		Canvas3D      canvas  = new Canvas3D();
+
+		RenderOptions options = new RenderOptions();
+		options.setOption(Option.USE_SHADOWS, true);
+		options.setOption(Option.USE_LIGHTING, true);
+		options.setOption(Option.USE_TEXTURES, true);
+
+		cp.setRenderOptions(options);
+
+		Color3f      ambientColor     = new Color3f(1f, 1f, 1f);
+		AmbientLight ambientLightNode = new AmbientLight(true, ambientColor);
+		scene.addChild(ambientLightNode);
+
+		DirectionalLight light = new DirectionalLight(true, new Color3f(1f, 1f, 1f), 
+													  new Vector3f(0f, -2f, -3f));
+		scene.addChild(light);
+
+		canvas.set3DPeer(cp);
+
+		view.addCanvas3D(canvas);
+
+		view.getTransform().lookAt(new Vector3f(DIST, DIST, DIST), // location of eye
+									new Vector3f(0, 0, 0), // center of view
+									new Vector3f(0, 1, 0));// which axis is "up"
+																				
+
+		scene.compile();
+
+		Thread thread = new Thread(this);
+		thread.start();
+		
+		/*Timer animation = new Timer();
+		animation.scheduleAtFixedRate(new TimerTask() {
+			public void run() {
+				model.setCurrentFrame(currentFrame);
+				currentFrame++;
+				if (currentFrame > model.getTotalFrames())
+					currentFrame = 0;
+		}}, 0, 60);*/
+		
+	}
+
+	public void run() {
+		while (true) {
+			view.renderOnce();
+		}
+	}
+
+	public BranchGroup createScene() {
+		BranchGroup root = new BranchGroup();
+		
+		Background bg = new Background(new Color3f(0.5f,0.5f,0.5f));
+		root.addChild(bg);
+		
+		root.addChild(createModel());
+		root.addChild(createJeepSharedCopies());
+		return root;
+	}
+
+	/**
+	*    Creating shared copies is real easy.
+	*/
+	public BranchGroup createJeepSharedCopies() {
+		System.out.println("Creating Shared Copies...");
+		long           start  = System.currentTimeMillis();
+
+		TDSModel       model1 = model.sharedCopy();
+		TransformGroup tg1    = new TransformGroup();
+
+		// gets just the wheel
+		TransformGroup wheel  = model1.getNamedTransformGroup("rrw");
+		wheel.removeFromParentGroup();// remove it from the main model.
+
+		tg1.addChild(wheel);
+		tg1.getTransform().setTranslation(new Vector3f(5f, 0f, 0f));
+
+		BranchGroup bg = new BranchGroup();
+		bg.addChild(tg1);
+
+		TransformGroup body = new TransformGroup();
+		body.addChild(model1.getSceneGroup());
+		body.getTransform().setTranslation(new Vector3f(-10f, 5f, 10f));
+
+		// add the body without the wheel cause it's been removed.
+		bg.addChild(body);
+
+		long stop  = System.currentTimeMillis();
+		long total = (stop - start) / 1000l;
+
+		System.out.println("Created copies in: " + total + " seconds");
+		return bg;
+	}
+
+	public TransformGroup createModel() {
+		System.out.println("Loading model...");
+		long start = System.currentTimeMillis();
+		try {
+			model = (TDSModel)(new Loader3DS().load(MODEL));
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+
+		long stop  = System.currentTimeMillis();
+		long total = (stop - start) / 1000l;
+
+		System.out.println("Loaded model in: " + total + " seconds");
+		TransformGroup tg = new TransformGroup();
+		tg.addChild(model.getSceneGroup());
+		//tg.getTransform().setScale(20f);
+		return tg;
+	}
+
+	public static void main(String[] args) {
+		new Example();
+	}
+}

@@ -1,0 +1,430 @@
+import java.util.Iterator;
+
+import org.odejava.Body;
+import org.odejava.GeomBox;
+import org.odejava.GeomSphere;
+import org.odejava.JointGroup;
+import org.odejava.JointHinge2;
+import org.odejava.World;
+import org.odejava.ode.Ode;
+
+public class APCvehicle {
+	World world = null;
+    float curX = 0;
+    float curY = 0;
+    float curZ = 0;
+	
+	JointGroup jointGroup;
+
+    // Store wheel hinges locally as they are accessed frequently
+    JointHinge2 hingeFrontLeft;
+    JointHinge2 hingeFrontRight;
+    JointHinge2 hingeMidLeft;
+    JointHinge2 hingeMidRight;
+    JointHinge2 hingeBackLeft;
+    JointHinge2 hingeBackRight;
+    
+    // Car parameters
+    float carDensity = 1f;
+    float wheelLength = 1f;
+    float wheelRadius = 4f;
+    float chassisSizeX = 15f;
+    float chassisSizeY = 30f;
+//    float chassisSizeZ = 1.5f;
+    float chassisSizeZ = 8f;
+    float wheelChassisDistance = 0.5f;
+    float groundClearance = 3.0f;
+    float bumperChassisDistance = 2.5f;
+    float chassisMass = 8f;
+    float wheelMass = 0.25f;
+    float suspensionErp = 0.8f;
+    float suspensionCfm = 0.4f;
+
+    float gasPedal = 0f;
+    float speed = 0f;
+    float maxSpeed = 25f;
+    float minSpeed = -5f;
+
+    boolean allbrake = false;
+    boolean handbrake = false;
+
+    float steeringWheel = 0f;
+    float steering = 0f;
+    float steeringLimit = (float) Math.PI / 12;
+    float steeringDeadzone = 0.00f;
+
+    int chassisId;
+    int wheelFLId, wheelFRId, wheelMLId, wheelMRId, wheelBLId, wheelBRId;
+	
+    
+    /**
+     * Initialize car with six wheels. Create geoms with bodies, bodies are
+     * dynamic objects that have position and rotation updated after each
+     * World.step() call.
+     *
+     */
+	public APCvehicle(World world) {
+		this.world=world;
+		jointGroup = new JointGroup();
+		initCar();		
+	}
+	
+    private void initCar() {
+        Body b;
+        
+        steering = 0;
+        speed = 0;
+        
+        // Create car wheels
+        b = new Body("wheelFrontLeft", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelFLId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelFrontRight", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelFRId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelMidLeft", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelMLId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelMidRight",world,  new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelMRId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelBackLeft", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelBLId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelBackRight",world,  new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelBRId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        // Create car chassis
+        b =
+            new Body(
+                "chassis",
+                world,
+                new GeomBox(chassisSizeX, chassisSizeY, chassisSizeZ));
+        b.adjustMass(chassisMass);
+        chassisId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+        
+        // Set objects position and mass
+        curX = -800;
+        curY = -450;
+        curZ = 100;
+        
+//      Car chassis
+        world.getBody("chassis").setPosition(curX, curY, curZ+groundClearance);
+
+        // Car wheels
+        world.getBody("wheelFrontLeft").setPosition(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY + chassisSizeY / 2 - wheelRadius,
+            curZ);
+        world.getBody("wheelFrontRight").setPosition(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY + chassisSizeY / 2 - wheelRadius,
+            curZ);
+        world.getBody("wheelMidLeft").setPosition(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY,
+            curZ);
+        world.getBody("wheelMidRight").setPosition(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY,
+            curZ);
+        world.getBody("wheelBackLeft").setPosition(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY - chassisSizeY / 2 + wheelRadius,
+            curZ);
+        world.getBody("wheelBackRight").setPosition(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY - chassisSizeY / 2 + wheelRadius,
+            curZ);
+
+        // Empty joint group
+        jointGroup.empty();
+
+        // Set front hinges (this has steering)
+        hingeFrontLeft = new JointHinge2("hingeFrontLeft", world, jointGroup);
+        hingeFrontLeft.attach(
+            world.getBody("chassis"),
+            world.getBody("wheelFrontLeft"));
+        hingeFrontLeft.setAnchor(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY + chassisSizeY / 2 - wheelRadius,
+            curZ);
+
+        hingeFrontRight = new JointHinge2("hingeFrontRight", world, jointGroup);
+        hingeFrontRight.attach(
+            world.getBody("chassis"),
+            world.getBody("wheelFrontRight"));
+        hingeFrontRight.setAnchor(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY + chassisSizeY / 2 - wheelRadius,
+            curZ);
+
+        // Set middle hinges
+        hingeMidLeft = new JointHinge2("hingeMidLeft", world, jointGroup);
+        hingeMidLeft.attach(          
+            world.getBody("chassis"),
+            world.getBody("wheelMidLeft"));
+        hingeMidLeft.setAnchor(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY,
+            curZ);
+
+        hingeMidRight = new JointHinge2("hingeMidRight", world, jointGroup);
+        hingeMidRight.attach(
+            world.getBody("chassis"),
+            world.getBody("wheelMidRight"));
+        hingeMidRight.setAnchor(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY,
+            curZ);
+
+        // Set back hinges
+        hingeBackLeft = new JointHinge2("hingeBackLeft", world, jointGroup);
+        hingeBackLeft.attach(
+            world.getBody("chassis"),
+            world.getBody("wheelBackLeft"));
+        hingeBackLeft.setAnchor(
+            curX - chassisSizeX / 2 - wheelRadius - wheelChassisDistance,
+            curY - chassisSizeY / 2 + wheelRadius,
+            curZ);
+
+        hingeBackRight = new JointHinge2("hingeBackRight", world, jointGroup);
+        hingeBackRight.attach(
+            world.getBody("chassis"),
+            world.getBody("wheelBackRight"));
+        hingeBackRight.setAnchor(
+            curX + chassisSizeX / 2 + wheelRadius + wheelChassisDistance,
+            curY - chassisSizeY / 2 + wheelRadius,
+            curZ);
+
+        // Set all hinges axis and parameters
+        JointHinge2 joint;
+        Iterator iter = jointGroup.getJointList().iterator();
+        while (iter.hasNext()) {
+            joint = (JointHinge2) iter.next();
+            // Set axis
+            joint.setAxis1(0, 0, 1);
+            joint.setAxis2(1, 0, 0);
+            // Set suspension
+            joint.setParam(Ode.dParamSuspensionERP, suspensionErp);
+            joint.setParam(Ode.dParamSuspensionCFM, suspensionCfm);
+            // Set stops to make sure wheels always stay in alignment
+            joint.setParam(Ode.dParamLoStop, 0);
+            joint.setParam(Ode.dParamHiStop, 0);
+            // Set acceleration parameters
+            joint.setParam(Ode.dParamFMax, 0);
+            joint.setParam(Ode.dParamVel2, 0);
+            joint.setParam(Ode.dParamFMax2, maxSpeed);
+        }
+    }
+    
+    /**
+     * Apply engine force by rotating all wheels (4wd). Handbrake is applies to
+     * back hinges (wheels).
+     *
+     */
+    private void updateEngine() {
+        if (gasPedal != 0) {
+            // Gas pedal pushed
+            if (speed > 0)
+                speed += (speed + 0.5f) * gasPedal;
+            else
+                speed -= (speed - 0.5f) * gasPedal;
+            if (speed > maxSpeed)
+                speed = maxSpeed;
+            else if (speed < minSpeed)
+                speed = minSpeed;
+        } else {
+            // No gas pedal down, slow down
+            if (speed > 0) {
+                // Drive ahead
+                if (speed < 0.5)
+                    speed = 0;
+                else
+                    speed -= 0.01 * speed;
+            } else if (speed < 0) {
+                // Reversing
+                if (speed > -0.5)
+                    speed = 0;
+                else
+                    speed -= 0.01 * speed;
+            }
+        }
+
+        if (allbrake) {
+            hingeFrontLeft.setParam(Ode.dParamVel2, (float) 0);
+            hingeFrontRight.setParam(Ode.dParamVel2, (float) 0);
+            hingeBackLeft.setParam(Ode.dParamVel2, (float) 0);
+            hingeBackRight.setParam(Ode.dParamVel2, (float) 0);
+        } else {
+            if (handbrake) {
+                // handbrake on back wheels
+                hingeBackLeft.setParam(Ode.dParamVel2, (float) 0);
+                hingeBackRight.setParam(Ode.dParamVel2, (float) 0);
+            } else {
+                hingeBackLeft.setParam(Ode.dParamVel2, (float) (this.speed));
+                hingeBackRight.setParam(Ode.dParamVel2, (float) (this.speed));
+            }
+            hingeMidLeft.setParam(Ode.dParamVel2, (float) (this.speed));
+            hingeMidRight.setParam(Ode.dParamVel2, (float) (this.speed));
+            hingeFrontLeft.setParam(Ode.dParamVel2, (float) (this.speed));
+            hingeFrontRight.setParam(Ode.dParamVel2, (float) (this.speed));
+        }
+    }
+
+    /**
+     * Align front wheels along user's steering.
+     *
+     */
+    private void updateSteering() {
+        if (steeringWheel != 0) {
+            steering += steeringWheel;
+            if (steering < -steeringLimit)
+                steering = -steeringLimit;
+            else if (steering > steeringLimit)
+                steering = steeringLimit;
+        }
+        if ((steering > -steeringDeadzone) && (steering < steeringDeadzone)) {
+            // go forward
+            hingeFrontLeft.setParam(Ode.dParamLoStop, 0);
+            hingeFrontLeft.setParam(Ode.dParamHiStop, 0);
+            hingeFrontRight.setParam(Ode.dParamLoStop, 0);
+            hingeFrontRight.setParam(Ode.dParamHiStop, 0);
+
+            hingeMidLeft.setParam(Ode.dParamLoStop, 0);
+            hingeMidLeft.setParam(Ode.dParamHiStop, 0);
+            hingeMidRight.setParam(Ode.dParamLoStop, 0);
+            hingeMidRight.setParam(Ode.dParamHiStop, 0);
+
+        } else if (steering > 0) {
+            // turn right
+            hingeFrontLeft.setParam(
+                Ode.dParamLoStop,
+                (float) (steering * 2 - 0.02));
+            hingeFrontLeft.setParam(
+                Ode.dParamHiStop,
+                (float) (steering * 2 + 0.02));
+            hingeFrontRight.setParam(
+                Ode.dParamLoStop,
+                (float) (steering * 2 - 0.02));
+            hingeFrontRight.setParam(
+                Ode.dParamHiStop,
+                (float) (steering * 2 + 0.02));
+
+            hingeMidLeft.setParam(
+                Ode.dParamLoStop,
+                (float) (steering - 0.01));
+            hingeMidLeft.setParam(
+                Ode.dParamHiStop,
+                (float) (steering + 0.01));
+            hingeMidRight.setParam(
+                Ode.dParamLoStop,
+                (float) (steering - 0.01));
+            hingeMidRight.setParam(
+                Ode.dParamHiStop,
+                (float) (steering  + 0.01));
+
+
+            // turn steeringwheel back to center
+            steering -= 0.01f;
+        } else {
+            // turn left
+            hingeFrontLeft.setParam(
+                Ode.dParamLoStop,
+                (float) (steering * 2 - 0.02));
+            hingeFrontLeft.setParam(
+                Ode.dParamHiStop,
+                (float) (steering * 2 + 0.02));
+            hingeFrontRight.setParam(
+                Ode.dParamLoStop,
+                (float) (steering * 2 - 0.02));
+            hingeFrontRight.setParam(
+                Ode.dParamHiStop,
+                (float) (steering * 2 + 0.02));
+
+            hingeMidLeft.setParam(
+                Ode.dParamLoStop,
+                (float) (steering  - 0.01));
+            hingeMidLeft.setParam(
+                Ode.dParamHiStop,
+                (float) (steering  + 0.01));
+            hingeMidRight.setParam(
+                Ode.dParamLoStop,
+                (float) (steering - 0.0));
+            hingeMidRight.setParam(
+                Ode.dParamHiStop,
+                (float) (steering + 0.01));
+
+            // turn steeringwheel back to center
+            steering += 0.01f;
+        }
+    }
+    /**
+     * Accelerate (or deaccelerate).
+     *
+     * @param force
+     */
+    public void accelerate(float force) {
+        gasPedal = force;
+    }
+
+    /**
+     * Steer car's front wheels.
+     *
+     * @param steer
+     */
+    public void steer(float steer) {
+        this.steeringWheel = steer;
+    }
+
+    /**
+     * Test ODE's addForce method to all objects.
+     *
+     * @param x
+     * @param y
+     * @param z
+     */
+    public void rotateObjects(float x, float y, float z) {
+        Iterator i = world.getBodies().iterator();
+        while (i.hasNext())
+             ((Body) i.next()).addForce(x, y, (float) (15 * z + 10));
+    }
+
+    /**
+     * Test ODE's addForce method to car chassis.
+     *
+     * @param z
+     */
+    public void applyForceToCar(float z) {
+        world.getBody("chassis").addForce(0f, 0f, (float) (10 * z));
+    }
+    /**
+     * @return Returns the handbrake.
+     */
+    public boolean isHandbrake() {
+        return handbrake;
+    }
+
+    /**
+     * @param handbrake
+     *            The handbrake to set.
+     */
+    public void setHandbrake(boolean handbrake) {
+        this.handbrake = handbrake;
+        System.out.println("Handbrake is " + handbrake);
+    }
+
+}

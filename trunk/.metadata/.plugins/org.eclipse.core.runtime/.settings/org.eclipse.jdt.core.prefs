@@ -1,0 +1,9 @@
+#Tue Jul 26 23:23:20 CEST 2005
+org.eclipse.jdt.core.classpathVariable.JRE_SRCROOT=src
+org.eclipse.jdt.core.classpathVariable.JRE_LIB=/System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/Classes/classes.jar
+org.eclipse.jdt.core.classpathVariable.JRE_SRC=/System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/Home/src.jar
+org.eclipse.jdt.core.classpathVariable.JUNIT_HOME=/Applications/Developing/eclipse/plugins/org.junit_3.8.1
+eclipse.preferences.version=1
+org.eclipse.jdt.core.builder.resourceCopyExclusionFilter=*.launch
+org.eclipse.jdt.core.classpathVariable.ECLIPSE_HOME=/Applications/Developing/eclipse
+org.eclipse.jdt.core.codeComplete.visibilityCheck=enabled

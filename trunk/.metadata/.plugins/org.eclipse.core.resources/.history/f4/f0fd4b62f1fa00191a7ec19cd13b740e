@@ -1,0 +1,152 @@
+package org.JAXarmor.client;
+
+import java.awt.*;
+import java.awt.event.*;
+
+import javax.vecmath.*;
+
+// Xith3D
+import com.xith3d.scenegraph.*;
+import com.xith3d.test.*;
+
+// use Jogl
+import com.xith3d.render.*;
+import com.xith3d.render.jogl.*;
+
+public class GameMain implements KeyListener
+{
+    private float rotX = 0;
+    private float rotY = 0;
+    private float rotZ = 0;
+
+    private TransformGroup objRotate;
+    private Transform3D rotate;
+
+    private boolean isRotationScheduled = false;
+
+    /**
+     * Starts the application.
+     *
+     * @param args command line parameters
+     */
+    public static void main(String[] args)
+    {
+        new GameMain();
+    }
+
+    /**
+     * Draws a cube.
+     */
+    public GameMain()
+    {
+        // create the virtual universe
+        VirtualUniverse universe = new VirtualUniverse();
+
+        // add a view to the universe
+        View view = new View();
+        universe.addView(view);
+
+        // add a locale
+        Locale locale = new Locale();
+        universe.addLocale(locale);
+
+        // create a BranchGroup
+        BranchGroup scene = new BranchGroup();
+        locale.addBranchGraph(scene);
+
+        // let objects along this path rotate
+        rotate = new Transform3D();
+        rotate.rotXYZ(rotX, rotY, rotZ);
+        objRotate = new TransformGroup(rotate);
+        scene.addChild(objRotate);
+
+        // create Cube
+        Geometry geo = Cube.createCubeViaTriangles(0, 0, 0, 1, true);
+        Shape3D sh = new Shape3D(geo, new Appearance());
+        objRotate.addChild(sh);
+
+        // turn the scene into a render friendly format
+        scene.compile();
+
+        // create a canvas for our graphics
+        RenderPeer rp = new RenderPeerImpl();
+        CanvasPeer cp = rp.makeCanvas(null, 640, 480, 32, false);
+        Canvas3D canvas = new Canvas3D();
+        canvas.set3DPeer(cp);
+
+        // add a key listener
+        cp.getComponent().addKeyListener(this);
+
+        // modify our view so we can see the cube
+        view.addCanvas3D(canvas);
+        view.getTransform().lookAt(new Vector3f( 0, 0, 2),   // location of eye
+                                   new Vector3f( 0, 0, 0),   // center of view
+                                   new Vector3f( 0, 1, 0));  // vector pointing up
+
+        // main rendering loop
+        while(true)
+        {
+            view.renderOnce();
+
+            if(isRotationScheduled)
+            {
+                performRotation();
+                isRotationScheduled = false;
+            }
+        }
+    }
+
+    /**
+     * Invoked when a key is pressed. This updates rotX and rotY, if cursor
+     * keys are pressed.
+     *
+     * @param e The triggered key event.
+     * @see java.awt.event.KeyListener#keyPressed(java.awt.event.KeyEvent)
+     */
+    public void keyPressed(KeyEvent e)
+    {
+        switch(e.getKeyCode())
+        {
+            case KeyEvent.VK_UP   : rotX+=0.05; isRotationScheduled=true; break;
+            case KeyEvent.VK_DOWN : rotX-=0.05; isRotationScheduled=true; break;
+            case KeyEvent.VK_LEFT : rotY+=0.05; isRotationScheduled=true; break;
+            case KeyEvent.VK_RIGHT: rotY-=0.05; isRotationScheduled=true; break;
+        }
+    }
+
+    /**
+     * Invoked when a key is typed.
+     *
+     * @param e The triggered key event.
+     * @see java.awt.event.KeyListener#keyTyped(java.awt.event.KeyEvent)
+     */
+    public void keyTyped(KeyEvent e)
+    {
+        switch(e.getKeyCode())
+        {
+            case KeyEvent.VK_ESCAPE: System.exit(0); break;
+        }
+    }
+
+    /**
+     * Invoked when a key is released.
+     *
+     * @param e The triggered key event.
+     * @see java.awt.event.KeyListener#keyReleased(java.awt.event.KeyEvent)
+     */
+    public void keyReleased(KeyEvent e)
+    {
+    }
+
+
+    /**
+     * This method performs the rotation.
+     */
+    private void performRotation()
+    {
+        rotate.rotXYZ(rotX, rotY, rotZ);
+        objRotate.setTransform(rotate);
+    }
+}
+
+

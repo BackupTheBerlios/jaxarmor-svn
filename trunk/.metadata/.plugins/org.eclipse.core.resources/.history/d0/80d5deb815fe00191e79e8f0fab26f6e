@@ -1,0 +1,110 @@
+import org.odejava.Body;
+import org.odejava.GeomBox;
+import org.odejava.GeomSphere;
+import org.odejava.JointGroup;
+import org.odejava.JointHinge2;
+import org.odejava.World;
+
+public class APCvehicle {
+	World world = null;
+	
+	JointGroup jointGroup;
+
+    // Store wheel hinges locally as they are accessed frequently
+    JointHinge2 hingeFrontLeft;
+    JointHinge2 hingeFrontRight;
+    JointHinge2 hingeMidLeft;
+    JointHinge2 hingeMidRight;
+    JointHinge2 hingeBackLeft;
+    JointHinge2 hingeBackRight;
+    
+    // Car parameters
+    float carDensity = 1f;
+    float wheelLength = 1f;
+    float wheelRadius = 4f;
+    float chassisSizeX = 15f;
+    float chassisSizeY = 30f;
+//    float chassisSizeZ = 1.5f;
+    float chassisSizeZ = 8f;
+    float wheelChassisDistance = 0.5f;
+    float groundClearance = 3.0f;
+    float bumperChassisDistance = 2.5f;
+    float chassisMass = 8f;
+    float wheelMass = 0.25f;
+    float suspensionErp = 0.8f;
+    float suspensionCfm = 0.4f;
+
+    float gasPedal = 0f;
+    float speed = 0f;
+    float maxSpeed = 25f;
+    float minSpeed = -5f;
+
+    boolean allbrake = false;
+    boolean handbrake = false;
+
+    float steeringWheel = 0f;
+    float steering = 0f;
+    float steeringLimit = (float) Math.PI / 12;
+    float steeringDeadzone = 0.00f;
+
+    int chassisId;
+    int wheelFLId, wheelFRId, wheelMLId, wheelMRId, wheelBLId, wheelBRId;
+	
+    jointGroup = new JointGroup();
+    
+    /**
+     * Initialize car with six wheels. Create geoms with bodies, bodies are
+     * dynamic objects that have position and rotation updated after each
+     * World.step() call.
+     *
+     */
+	public APCvehicle(World world) {
+		this.world=world;
+		initCar();		
+	}
+	
+    private void initCar() {
+        Body b;
+
+        // Create car wheels
+        b = new Body("wheelFrontLeft", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelFLId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelFrontRight", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelFRId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelMidLeft", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelMLId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelMidRight",world,  new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelMRId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelBackLeft", world, new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelBLId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        b = new Body("wheelBackRight",world,  new GeomSphere(wheelRadius));
+        b.adjustMass(wheelMass);
+        wheelBRId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+
+        // Create car chassis
+        b =
+            new Body(
+                "chassis",
+                world,
+                new GeomBox(chassisSizeX, chassisSizeY, chassisSizeZ));
+        b.adjustMass(chassisMass);
+        chassisId = b.getGeom().getNativeAddr();
+        space.addBodyGeoms(b);
+    }
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.jdt.debug.ui.RUNTIME_CLASSPATH_ADVANCED_DIALOG">
+		<item key="org.eclipse.debug.ui.DIALOG_HEIGHT" value="284"/>
+		<item key="org.eclipse.debug.ui.DIALOG_WIDTH" value="212"/>
+		<item key="org.eclipse.debug.ui.DIALOG_ORIGIN_Y" value="167"/>
+		<item key="org.eclipse.debug.ui.DIALOG_ORIGIN_X" value="482"/>
+	</section>
+</section>
